@@ -19,8 +19,9 @@ function AppShell({ user, sb }) {
   const { controls, loadContext, currentEntityId, entityName, ciiPresumption, piiAlwaysInvolved } = useEngagement()
 
   const showToast = (msg) => {
-    setToast(msg)
-    setTimeout(() => setToast(''), 2800)
+    const time = new Date().toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'})
+    setToast(msg + ' [' + time + ']')
+    setTimeout(() => setToast(''), 3500)
   }
 
   const tabs = [
