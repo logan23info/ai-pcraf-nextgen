@@ -22,10 +22,10 @@ function cellStyle(val) {
   return {textAlign:'center'}
 }
 
-export default function TruthTable({ user, sb, currentEntityId, showToast }) {
+export default function TruthTable({ user, sb, currentEntityId, showToast, ciiPresumption, piiAlwaysInvolved }) {
   const [incident, setIncident] = useState('')
-  const [pii, setPii]           = useState('yes')
-  const [cii, setCii]           = useState('yes')
+  const [pii, setPii]           = useState(piiAlwaysInvolved ? 'yes' : 'no')
+  const [cii, setCii]           = useState(ciiPresumption ? 'yes' : 'unknown')
   const [financial, setFinancial] = useState('yes')
   const [result, setResult]     = useState(null)
   const [output, setOutput]     = useState('')

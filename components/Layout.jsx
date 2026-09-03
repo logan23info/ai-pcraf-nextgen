@@ -27,7 +27,8 @@ export default function Layout({ user, sb, tabs, activeTab, setActiveTab, toast,
     entity:'Entity Profiler', controls:'Control Matrix Builder',
     truth:'Truth Table — Incident Classifier', intelligence:'Document Intelligence & Gap Analysis',
     dossier:'Regulatory Dossier — Live Fetch Engine',
-    daksh:'DAKSH Incident Payload Generator', export:'Export & Backup'
+    daksh:'DAKSH Incident Payload Generator', export:'Export & Backup',
+    intelligence:'Document Intelligence & Gap Analysis'
   }
 
   return (
@@ -72,7 +73,7 @@ export default function Layout({ user, sb, tabs, activeTab, setActiveTab, toast,
               style={{borderColor:'#E2E5EA'}}>Self-audit checklist</button>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-6">{children}</div>
+        <div className="flex-1 overflow-y-auto">{children}</div>
       </main>
 
       {/* Checklist Modal */}
