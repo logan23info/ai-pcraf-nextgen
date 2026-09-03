@@ -63,40 +63,25 @@ export default function EntityProfiler({ user, sb, showToast }) {
   async function generate() {
     if (!form.name||!form.functionalType) { showToast('Enter entity name and functional type'); return }
     setLoading(true); setOutput(''); setError('')
-    const prompt = 'You are a Principal Cyber Risk & Compliance Consultant under AI-PCRAF v3.0.
-
-' +
-      'ENTITY: ' + form.name + ' | Type: ' + form.functionalType + ' | SBR: ' + sbrLayer +
-      ' | Assets: ₹' + (form.totalAssets||'?') + ' Crore | CBS: ' + (form.cbs||'Unknown') +
-      ' | Cloud: ' + form.cloud + ' | Period: ' + (form.period||'Not specified') + '
-
-' +
-      'RISK SIGNALS
-Recent changes: ' + (form.recentChanges||'None') +
-      '
-Known weaknesses: ' + (form.knownWeaknesses||'None') +
-      '
-External signals: ' + (form.externalSignals||'None') + '
-
-' +
-      'Produce Phase 1 Entity Risk Profile for ' + form.functionalType + ' (' + sbrLayer + '):
-' +
-      '1. TIER CLASSIFICATION — use exact terminology: ' + form.functionalType + ' / ' + sbrLayer +
-      '. Never use generic Tier-N. Cite RBI IT Gov MD 2023 Chapter/Section [VT]. CERT-In SLA = 6 hours always.
-' +
-      '2. MANDATORY IT REQUIREMENTS — specific to ' + form.functionalType + ' at ' + sbrLayer +
-      '. SOC/CISO/IT Committee requirements with governing section [VT].
-' +
-      '3. TOP 5 ASSURANCE DOMAINS — from AD-01 to AD-07 with rationale specific to this entity type.
-' +
-      '4. TIER-DRIFT ALERT MATRIX — obligations if assets cross next SBR threshold.
-' +
-      '5. CII DESIGNATION ASSESSMENT — with BS-04 if uncertain.
-' +
-      '6. RISK SIGNAL IMPLICATIONS — how declared risk signals amplify audit risk.
-
-' +
-      'Citations must include Chapter/Section. Flag DPDP [BS-01]. No GDPR/ISO/SOC2.'
+    const prompt = [
+      'You are a Principal Cyber Risk Compliance Consultant under AI-PCRAF v3.0.',
+      'Entity: ' + form.name + ' | Type: ' + form.functionalType + ' | SBR: ' + sbrLayer,
+      'Assets: Rs ' + (form.totalAssets||'?') + ' Crore | CBS: ' + (form.cbs||'Unknown') + ' | Cloud: ' + form.cloud,
+      'Period: ' + (form.period||'Not specified'),
+      'Recent changes: ' + (form.recentChanges||'None'),
+      'Known weaknesses: ' + (form.knownWeaknesses||'None'),
+      'External signals: ' + (form.externalSignals||'None'),
+      '',
+      'Produce Phase 1 Entity Risk Profile for ' + form.functionalType + ' (' + sbrLayer + ').',
+      '1. TIER CLASSIFICATION: use exact terminology ' + form.functionalType + ' never generic Tier-N. Cite RBI IT Gov MD 2023 Chapter/Section [VT]. CERT-In SLA = 6 hours always.',
+      '2. MANDATORY IT REQUIREMENTS specific to ' + form.functionalType + ' at ' + sbrLayer + '. SOC/CISO/IT Committee with section [VT].',
+      '3. TOP 5 ASSURANCE DOMAINS from AD-01 to AD-07 with rationale.',
+      '4. TIER-DRIFT ALERT MATRIX: obligations if assets cross next SBR threshold.',
+      '5. CII DESIGNATION ASSESSMENT with BS-04 if uncertain.',
+      '6. RISK SIGNAL IMPLICATIONS: how declared risk signals amplify audit risk.',
+      '',
+      'Citations must include Chapter/Section. Flag DPDP [BS-01]. No GDPR/ISO/SOC2.',
+    ].join('\n')
     try {
       const result = await callAPI(prompt, 2000)
       setOutput(formatAIOutput(result))
