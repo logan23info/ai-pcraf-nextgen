@@ -40,7 +40,8 @@ export default function EntityProfiler({ user, sb, showToast }) {
   const [form, setForm] = useState({
     name:'', functionalType:'', totalAssets:'', rbiRegNo:'',
     cbs:'', cloud:'none', assets:'', period:'',
-    recentChanges:'', knownWeaknesses:'', externalSignals:''
+    recentChanges:'', knownWeaknesses:'', externalSignals:'',
+    sbrOverride:''
   })
   const set = (k,v) => setForm(f=>({...f,[k]:v}))
 
@@ -153,7 +154,7 @@ export default function EntityProfiler({ user, sb, showToast }) {
     const payload = {
       user_id: user.id, name: form.name,
       type: form.functionalType, functional_type: form.functionalType,
-      sbr_layer: sbrLayer, nof_threshold: nofThreshold,
+      sbr_layer: form.sbrOverride || sbrLayer, nof_threshold: nofThreshold,
       total_assets: parseFloat(form.totalAssets)||null,
       rbi_registration_no: form.rbiRegNo,
       rbi_verified: verifyResult?.verified||false,
@@ -188,7 +189,7 @@ export default function EntityProfiler({ user, sb, showToast }) {
       setDriftTriggers(triggers)
     }
     await loadContext()
-    showToast('Entity saved — ' + (triggers.length||0) + ' drift triggers active')
+    showToast('Entity saved - ' + (triggers.length||0) + ' drift triggers active')
   }
 
   async function loadFromDB() {
@@ -270,13 +271,20 @@ export default function EntityProfiler({ user, sb, showToast }) {
               {form.functionalType && (
                 <>
                   <FormGroup label="SBR layer (auto-derived)">
-                    <div className="px-2.5 py-1.5 text-sm rounded border border-gray-100 bg-gray-50 font-semibold" style={{color:'#5B21B6'}}>{sbrLayer}</div>
-                    {(sbrLayer === 'Middle Layer (ML)') && (
-                      <div className="text-xs mt-1" style={{color:'#92400E'}}>
-                        If RBI has specifically identified this entity as Upper Layer, select NBFC-UL manually below.
-                      </div>
-                    )}
+                    <div className="px-2.5 py-1.5 text-sm rounded border border-gray-100 bg-gray-50 font-semibold" style={{color:'#5B21B6'}}>{form.sbrOverride || sbrLayer}</div>
                   </FormGroup>
+                  {sbrLayer === 'Middle Layer (ML)' && (
+                    <FormGroup label="RBI-identified upper/top layer? (override)" htmlFor="ep-sbr-override">
+                      <Select id="ep-sbr-override" value={form.sbrOverride} onChange={e=>set('sbrOverride',e.target.value)}>
+                        <option value="">No — Middle Layer (auto-derived)</option>
+                        <option value="Upper Layer (UL)">Yes — Upper Layer (RBI notified)</option>
+                        <option value="Top Layer (TL)">Yes — Top Layer (RBI notified)</option>
+                      </Select>
+                      <div className="text-xs mt-1" style={{color:'#6B7280'}}>
+                        UL/TL cannot be auto-derived. Select only if RBI has formally notified this entity.
+                      </div>
+                    </FormGroup>
+                  )}
                   <FormGroup label="Min NOF threshold (auto-derived)">
                     <div className="px-2.5 py-1.5 text-sm rounded border border-gray-100 bg-gray-50">{nofThreshold}</div>
                   </FormGroup>
