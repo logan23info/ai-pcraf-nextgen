@@ -1,7 +1,8 @@
 "use client"
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { callAPI } from '../lib/api'
 import { formatAIOutput } from '../lib/formatter'
+import { useEngagement } from '../lib/EngagementContext'
 import { Card, SectionHeader, FormGrid, FormGroup, Input, Select, BtnRow, Btn, Spinner, AIOutput, Table } from './ui'
 
 const STATIC_ROWS = [
