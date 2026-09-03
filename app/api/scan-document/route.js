@@ -69,7 +69,8 @@ export async function POST(req) {
     let text = ''
 
     if (fileType === 'pdf') {
-      const pdfParse = require('pdf-parse')
+      // pdf-parse workaround: import the lib file directly to avoid test file ENOENT
+      const pdfParse = require('pdf-parse/lib/pdf-parse.js')
       const parsed   = await pdfParse(buffer)
       text = parsed.text
     } else if (fileType === 'docx' || fileType === 'doc') {
