@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { callAPI } from '../lib/api'
 import { formatAIOutput } from '../lib/formatter'
+import { useEngagement } from '../lib/EngagementContext'
 import { Card, SectionHeader, FormGrid, FormGroup, Input, Select, Textarea, BtnRow, Btn, Spinner, AIOutput, Table, Tag, TierBadge } from './ui'
 
 const DOMAINS = [
@@ -22,10 +23,22 @@ const CTRL_DOMAINS = [
 ]
 
 export default function ControlMatrix({ user, sb, controls, loadControls, currentEntityId, entityName, showToast }) {
-  const [domain, setDomain]       = useState('AD-01')
+  const { mandateProfile, driftTriggers, entity } = useEngagement()
+
+  // Pre-fill tier from entity context
+  const defaultTier = entity?.sbr_layer?.includes('Upper') ? 'NBFC-UL'
+    : entity?.sbr_layer?.includes('Middle') ? 'NBFC-ML'
+    : entity?.sbr_layer?.includes('Base') ? 'NBFC-BL'
+    : entity?.functional_type || 'NBFC-ML'
+
+  // Priority domains from mandate profile
+  const priorityDomains = mandateProfile?.priority_domains || []
+  const activeTriggers  = driftTriggers.filter(t => t.cascade_status === 'ACTIVE')
+
+  const [domain, setDomain]         = useState('AD-01')
   const [ctrlDomain, setCtrlDomain] = useState('CBS')
-  const [subsystem, setSubsystem] = useState('')
-  const [tier, setTier]           = useState('NBFC-ML')
+  const [subsystem, setSubsystem]   = useState('')
+  const [tier, setTier]             = useState(defaultTier)
   const [focus, setFocus]         = useState('')
   const [output, setOutput]       = useState('')
   const [error, setError]         = useState('')
@@ -153,7 +166,7 @@ CITATION RULES:
       const { error: dbErr } = await sb.from('controls').insert(dbRow)
       if (dbErr) { showToast('DB save failed: ' + dbErr.message); return }
       await loadControls()
-      showToast(controlId + ' saved — ' + (controls.length+1) + ' total controls')
+      showToast(controlId + ' saved - ' + (controls.length+1) + ' total controls')
       setFocus(''); setSubsystem('')
     } catch(e) { setError(e.message) } finally { setLoading(false) }
   }
@@ -177,6 +190,49 @@ CITATION RULES:
     <div>
       <SectionHeader title="Control matrix builder"
         subtitle="Generate CONTROL_OBJECTs with JSON schema, CoT reasoning, and IIA 2310 fieldwork pack."/>
+      {/* Drift trigger panel */}
+      {activeTriggers.length > 0 && (
+        <Card title={activeTriggers.length + ' active drift triggers - generate controls for these domains first'}>
+          {activeTriggers.map((t, i) => (
+            <div key={i} className="flex items-start gap-3 py-2 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50"
+              onClick={() => {
+                const domainMap = {
+                  CBS:'AD-02', IAM:'AD-01', CLD:'AD-03', API:'AD-05',
+                  AI:'AD-04', INC:'AD-06', TPR:'AD-05', DLP:'AD-07', AUD:'AD-01'
+                }
+                setCtrlDomain(t.domain || 'CBS')
+                setDomain(domainMap[t.domain] || 'AD-01')
+              }}>
+              <span className="text-xs font-bold px-2 py-0.5 rounded font-mono shrink-0"
+                style={{background: t.severity==='Critical'?'#FEE2E2':t.severity==='High'?'#FFEDD5':'#FEF3C7',
+                        color:      t.severity==='Critical'?'#991B1B':t.severity==='High'?'#C2410C':'#92400E'}}>
+                {t.trigger_ref}
+              </span>
+              <div className="flex-1">
+                <div className="text-xs font-semibold">{t.description}</div>
+                <div className="text-xs text-gray-500 mt-0.5">{t.implications}</div>
+              </div>
+              <span className="tag tag-bs text-xs shrink-0">{t.domain}</span>
+              <span className="text-xs text-blue-600 shrink-0">Click to select</span>
+            </div>
+          ))}
+        </Card>
+      )}
+
+      {/* Priority domains from mandate profile */}
+      {priorityDomains.length > 0 && (
+        <div className="mb-3 flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-gray-500 font-medium">Priority domains for {entity?.functional_type}:</span>
+          {priorityDomains.map((d, i) => (
+            <span key={i} className="text-xs px-2 py-0.5 rounded cursor-pointer hover:opacity-80"
+              style={{background:'#DBEAFE', color:'#1E40AF', fontWeight: i===0?700:400}}
+              onClick={() => setCtrlDomain(d)}>
+              {i+1}. {d}
+            </span>
+          ))}
+        </div>
+      )}
+
       <Card title="Generate new control">
         <FormGrid>
           <FormGroup label="Assurance domain" htmlFor="cm-domain">
