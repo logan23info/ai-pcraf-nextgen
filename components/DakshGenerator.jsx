@@ -18,7 +18,7 @@ export default function DakshGenerator({ user, sb, currentEntityId, showToast })
   const [cii, setCii]           = useState('yes')
   const [financial, setFinancial] = useState('yes')
 
-  // F1: Pre-fill from Truth Table incident if available
+  // F1/P8: Pre-fill from Truth Table incident + failed controls
   useEffect(function() {
     if (activeIncident && !incident) {
       setIncident(activeIncident.description || '')
@@ -101,6 +101,16 @@ export default function DakshGenerator({ user, sb, currentEntityId, showToast })
       {activeIncident && (
         <div className="mb-3 p-3 rounded text-xs" style={{background:'#D1FAE5',color:'#065F46'}}>
           ✓ Incident pre-filled from Truth Table. Review and adjust before generating payload.
+        </div>
+      )}
+      {activeIncident?.failedControls?.length > 0 && (
+        <div className="mb-3 p-3 rounded text-xs" style={{background:'#FEE2E2',color:'#991B1B'}}>
+          <strong>Failed controls ({activeIncident.failedControls.length}) — will be included in root cause:</strong>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {activeIncident.failedControls.map(function(c) {
+              return <span key={c.id} className="tag tag-fr">{c.id}</span>
+            })}
+          </div>
         </div>
       )}
       <Card title="Incident details">

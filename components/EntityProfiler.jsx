@@ -48,9 +48,26 @@ export default function EntityProfiler({ user, sb, showToast }) {
   const sbrLayer = form.functionalType ? deriveSBRLayer(form.functionalType, form.totalAssets) : ''
   const nofThreshold = form.functionalType ? deriveNOF(form.functionalType) : ''
 
+  // P1: Load regulatory references when functional type changes
+  useEffect(function() {
+    if (!form.functionalType) return
+    setRefsLoading(true)
+    fetch('/api/regulatory-refs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ functionalType: form.functionalType, sbrLayer })
+    })
+    .then(function(r) { return r.json() })
+    .then(function(data) { setRegRefs(data) })
+    .catch(function() {})
+    .finally(function() { setRefsLoading(false) })
+  }, [form.functionalType, sbrLayer])
+
   const [output, setOutput]           = useState('')
   const [error, setError]             = useState('')
   const [loading, setLoading]         = useState(false)
+  const [regRefs, setRegRefs]         = useState({ applicable:[], notApplicable:[] })
+  const [refsLoading, setRefsLoading] = useState(false)
   const [verifying, setVerifying]     = useState(false)
   const [verifyResult, setVerifyResult] = useState(null)
   const [triggers, setTriggers]       = useState([])
@@ -312,6 +329,40 @@ export default function EntityProfiler({ user, sb, showToast }) {
               <div className="mt-2 p-2 rounded text-xs"
                 style={{background:verifyResult.verified?'#D1FAE5':'#FEF3C7', color:verifyResult.verified?'#065F46':'#92400E'}}>
                 {verifyResult.verified?'✓ ':'⚠ '}{verifyResult.note}
+              </div>
+            )}
+
+            {/* P1: Regulatory references panel */}
+            {regRefs.applicable.length > 0 && (
+              <div className="mt-3 col-span-2">
+                <div className="text-xs font-semibold text-gray-500 mb-2">
+                  Applicable regulatory frameworks for {form.functionalType}:
+                </div>
+                <div className="space-y-1">
+                  {regRefs.applicable.map(function(ref) {
+                    return (
+                      <div key={ref.ref_code} className="flex items-start gap-2 p-2 rounded border border-gray-100 bg-gray-50">
+                        <span className="tag tag-v text-xs shrink-0">[V]</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-semibold truncate">{ref.title}</div>
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            {ref.issuing_body} · {ref.effective_date} · {ref.doc_type}
+                            {ref.notes && <span className="ml-1 text-amber-700"> — {ref.notes.substring(0,80)}</span>}
+                          </div>
+                        </div>
+                        {ref.url && (
+                          <a href={ref.url} target="_blank" rel="noreferrer"
+                            className="text-xs text-blue-600 shrink-0">↗</a>
+                        )}
+                      </div>
+                    )
+                  })}
+                  {regRefs.notApplicable.length > 0 && (
+                    <div className="text-xs text-gray-400 mt-1">
+                      Not applicable: {regRefs.notApplicable.map(function(r){return r.ref_code}).join(', ')}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
             <BtnRow>

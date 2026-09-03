@@ -42,6 +42,7 @@ export default function TruthTable({ user, sb, currentEntityId, showToast, ciiPr
   const [output, setOutput]     = useState('')
   const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
+  const [failedControls, setFailedControls] = useState([])
 
   async function evaluate() {
     if (!incident) { showToast('Describe the incident'); return }
@@ -110,7 +111,7 @@ CITATION RULES: DocumentName, Chapter/Section [VT]. CERT-In always "April 2022".
           description:incident, pii, cii, financial, ai_analysis:res
         })
         // F1: Share incident with DAKSH via context
-        setActiveIncident({ description:incident, pii, cii, financial, severity:'Sev-1', analysis:res })
+        setActiveIncident({ description:incident, pii, cii, financial, severity:'Sev-1', analysis:res, failedControls:failedControls })
         showToast('Incident saved - switch to DAKSH tab to generate payload')
       }
     } catch(e) { setError(e.message) } finally { setLoading(false) }
@@ -220,7 +221,21 @@ CITATION RULES: DocumentName, Chapter/Section [VT]. CERT-In always "April 2022".
                     <td className="px-3 py-2 text-xs max-w-xs" style={{maxWidth:200}}>{(c.codex_ref||'').substring(0,50)}</td>
                     <td className="px-3 py-2">
                       <select className="text-xs border border-gray-200 rounded px-1 py-0.5"
-                        onChange={function(e) { showToast(c.id + ' marked as ' + e.target.value) }}>
+                        onChange={function(e) {
+                          const val = e.target.value
+                          if (val === 'Failed') {
+                            setFailedControls(function(prev) {
+                              return prev.find(function(f){return f.id===c.id})
+                                ? prev
+                                : prev.concat([{ id:c.id, domain:c.ctrl_domain, codex_ref:c.codex_ref }])
+                            })
+                          } else {
+                            setFailedControls(function(prev) {
+                              return prev.filter(function(f){return f.id!==c.id})
+                            })
+                          }
+                          showToast(c.id + ' marked as ' + val)
+                        }}>
                         <option value="">Assess</option>
                         <option value="Operated">Operated</option>
                         <option value="Failed">Failed - root cause</option>

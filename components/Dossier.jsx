@@ -3,6 +3,22 @@ import { useState } from 'react'
 import { Card, SectionHeader, BtnRow, Btn, Spinner, Table } from './ui'
 
 export default function Dossier({ user, sb, controls, showToast }) {
+  const [manualVerify, setManualVerify] = useState({})
+  const [verifyNote, setVerifyNote]     = useState({})
+
+  async function markManuallyVerified(fetchId) {
+    const note = verifyNote[fetchId] || 'Manually verified by auditor'
+    if (user) {
+      await sb.from('dossier_log').insert({
+        user_id: user.id, fetch_id: fetchId,
+        url: 'manual', status: 'MANUALLY-VERIFIED',
+        result_summary: note, amendment_detected: false
+      })
+    }
+    setManualVerify(function(prev) { return Object.assign({}, prev, {[fetchId]: true}) })
+    showToast(fetchId + ' marked as manually verified')
+  }
+
   const [results, setResults]   = useState([])
   const [summary, setSummary]   = useState(null)
   const [history, setHistory]   = useState([])
@@ -59,11 +75,12 @@ export default function Dossier({ user, sb, controls, showToast }) {
     const { data } = await sb.from('dossier_log').select('*').eq('user_id',user.id)
       .gte('fetched_at',tenYearsAgo.toISOString()).order('fetched_at',{ascending:false})
     setHistory(data||[])
-    showToast('Fetch history — ' + (data?.length||0) + ' records (last 10 years)')
+    showToast('Fetch history - ' + (data?.length||0) + ' records (last 10 years)')
   }
 
   function StatusTag({ status }) {
     if (status==='FETCHED') return <span className="tag tag-v">[V]</span>
+    if (status==='MANUALLY-VERIFIED') return <span className="tag tag-vt">[MANUALLY-VERIFIED]</span>
     return <span className="tag tag-fr">[FETCH-FAILED]</span>
   }
 
@@ -107,6 +124,41 @@ export default function Dossier({ user, sb, controls, showToast }) {
             </div>
           )}
         </>
+      )}
+
+      {/* P10: Manual verify panel for failed fetches */}
+      {results.filter(function(r){return r.status==='FETCH-FAILED'}).length > 0 && (
+        <Card title="Manual verification — for failed fetches" className="mt-3">
+          <p className="text-xs text-gray-500 mb-3">
+            Download the document manually, verify it, then mark as verified below.
+          </p>
+          {results.filter(function(r){return r.status==='FETCH-FAILED'}).map(function(r) {
+            return (
+              <div key={r.id} className="flex items-center gap-2 py-2 border-b border-gray-100 last:border-0">
+                <span className="font-mono text-xs">{r.id}</span>
+                <span className="text-xs text-gray-600 flex-1">{r.label}</span>
+                {manualVerify[r.id] ? (
+                  <span className="tag tag-vt text-xs">Manually verified</span>
+                ) : (
+                  <>
+                    <input
+                      className="text-xs border border-gray-200 rounded px-2 py-1 flex-1 max-w-xs"
+                      placeholder="Verification note..."
+                      value={verifyNote[r.id]||''}
+                      onChange={function(e){
+                        setVerifyNote(function(prev){return Object.assign({},prev,{[r.id]:e.target.value})})
+                      }}/>
+                    <Btn onClick={function(){markManuallyVerified(r.id)}} variant="secondary">
+                      Mark verified
+                    </Btn>
+                    <a href={r.url} target="_blank" rel="noreferrer"
+                      className="text-xs text-blue-600">Open URL</a>
+                  </>
+                )}
+              </div>
+            )
+          })}
+        </Card>
       )}
 
       {history.length>0 && (
