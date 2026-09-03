@@ -25,7 +25,7 @@ export default function Layout({ user, sb, tabs, activeTab, setActiveTab, toast,
 
   const TITLES = {
     entity:'Entity Profiler', controls:'Control Matrix Builder',
-    truth:'Truth Table — Incident Classifier', blindspots:'Blind Spot Register',
+    truth:'Truth Table — Incident Classifier', intelligence:'Document Intelligence & Gap Analysis',
     dossier:'Regulatory Dossier — Live Fetch Engine',
     daksh:'DAKSH Incident Payload Generator', export:'Export & Backup'
   }

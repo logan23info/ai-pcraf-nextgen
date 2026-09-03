@@ -6,7 +6,7 @@ import Layout from '../components/Layout'
 import EntityProfiler from '../components/EntityProfiler'
 import ControlMatrix from '../components/ControlMatrix'
 import TruthTable from '../components/TruthTable'
-import BlindSpots from '../components/BlindSpots'
+import Intelligence from '../components/Intelligence'
 import Dossier from '../components/Dossier'
 import DakshGenerator from '../components/DakshGenerator'
 import Export from '../components/Export'
@@ -59,7 +59,7 @@ export default function Home() {
     { id:'entity',     icon:'⊙', label:'Entity Profiler' },
     { id:'controls',   icon:'≣', label:'Control Matrix' },
     { id:'truth',      icon:'≡', label:'Truth Table' },
-    { id:'blindspots', icon:'⚠', label:'Blind Spots' },
+    { id:'intelligence', icon:'⬡', label:'Intelligence' },
     { id:'dossier',    icon:'◆', label:'Dossier' },
     { id:'daksh',      icon:'⚠', label:'DAKSH' },
     { id:'export',     icon:'↓', label:'Export' },
@@ -76,7 +76,7 @@ export default function Home() {
       {activeTab === 'entity'     && <EntityProfiler  {...tabProps} />}
       {activeTab === 'controls'   && <ControlMatrix   {...tabProps} />}
       {activeTab === 'truth'      && <TruthTable       {...tabProps} />}
-      {activeTab === 'blindspots' && <BlindSpots        />}
+      {activeTab === 'intelligence' && <Intelligence   {...tabProps} />}
       {activeTab === 'dossier'    && <Dossier          {...tabProps} />}
       {activeTab === 'daksh'      && <DakshGenerator   {...tabProps} />}
       {activeTab === 'export'     && <Export           {...tabProps} />}
