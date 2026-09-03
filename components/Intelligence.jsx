@@ -1,5 +1,6 @@
 "use client"
 import { useState } from 'react'
+import { useEngagement } from '../lib/EngagementContext'
 import { Card, SectionHeader, BtnRow, Btn, Spinner, Table, Tag } from './ui'
 
 const FETCH_LABELS = {
@@ -19,6 +20,16 @@ const STATUS_STYLE = {
 }
 
 export default function Intelligence({ user, sb, controls, currentEntityId, showToast }) {
+  const { setActiveTab } = useEngagement ? useEngagement() : {}
+
+  // F3: Navigate to control matrix with pre-filled focus from GAP item
+  function generateFromGap(obligation) {
+    if (typeof window !== 'undefined') {
+      window._gapObligation = obligation
+    }
+    showToast('Go to Control Matrix tab - focus pre-filled from GAP obligation')
+  }
+
   // Panel 1 — PDF Scanner
   const [scanFile, setScanFile]       = useState(null)
   const [scanFetchId, setScanFetchId] = useState('FETCH-01')
@@ -143,7 +154,7 @@ export default function Intelligence({ user, sb, controls, currentEntityId, show
           }))
         )
       }
-      showToast('Gap analysis complete — ' + data.summary?.coverage_pct + '% coverage')
+      showToast('Gap analysis complete - ' + data.summary?.coverage_pct + '% coverage')
     } catch(e) { showToast('Analysis error: ' + e.message) }
     finally { setAnalyzing(false) }
   }
@@ -315,7 +326,7 @@ export default function Intelligence({ user, sb, controls, currentEntityId, show
               </div>
 
               {/* Delta table */}
-              <Table headers={['Section ref','Obligation','Status','Action','Note']}>
+              <Table headers={['Section ref','Obligation','Status','Action','Note','']}>
                 {gapResults.map((r,i) => {
                   const s = STATUS_STYLE[r.status] || STATUS_STYLE.GAP
                   return (
@@ -328,6 +339,22 @@ export default function Intelligence({ user, sb, controls, currentEntityId, show
                       </td>
                       <td className="px-3 py-2 text-xs">{r.delta_action||'—'}</td>
                       <td className="px-3 py-2 text-xs max-w-xs text-gray-600">{r.improvement_note||r.gap_reason||'—'}</td>
+                      <td className="px-3 py-2">
+                        {r.status === 'GAP' && (
+                          <button onClick={function(){generateFromGap(r.obligation)}}
+                            className="text-xs px-2 py-0.5 rounded"
+                            style={{background:'#DBEAFE',color:'#1E40AF'}}>
+                            Generate control
+                          </button>
+                        )}
+                        {r.status === 'WEAK' && (
+                          <button onClick={function(){showToast('Fix: ' + (r.improvement_note||'Review control'))}}
+                            className="text-xs px-2 py-0.5 rounded"
+                            style={{background:'#FEF3C7',color:'#92400E'}}>
+                            Fix
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   )
                 })}

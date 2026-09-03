@@ -1,20 +1,24 @@
 "use client"
 import { useState } from 'react'
+import { useEngagement } from '../lib/EngagementContext'
 import { Card, SectionHeader, BtnRow, Btn } from './ui'
 
 export default function Export({ user, sb, controls, showToast }) {
+  const { driftTriggers, coverageMap } = useEngagement()
   const [status, setStatus] = useState('')
 
   async function exportExcel() {
     setStatus('Building 4-sheet workbook...')
     try {
-      const [dRes, eRes, cRes] = await Promise.all([
+      const [dRes, eRes, cRes, iRes] = await Promise.all([
         sb.from('dossier_log').select('*').eq('user_id',user.id).order('fetched_at',{ascending:false}).limit(60),
         sb.from('entities').select('*').eq('user_id',user.id).order('created_at',{ascending:false}).limit(1),
         sb.from('controls').select('*').eq('user_id',user.id).order('created_at',{ascending:true}),
+        sb.from('incidents').select('*').eq('user_id',user.id).order('created_at',{ascending:false}).limit(20),
       ])
-      const dossierData = dRes.data||[]
-      const entityData  = eRes.data?.[0]||{}
+      const dossierData   = dRes.data||[]
+      const entityData    = eRes.data?.[0]||{}
+      const incidentsData = iRes.data||[]
       const fullControls = (cRes.data||[]).map(r=>({
         id:r.control_id, ctrl_domain:r.ctrl_domain, ad_domain:r.ad_domain,
         subsystem:r.subsystem, tier:r.tier, risk_rating:r.risk_rating,
@@ -45,7 +49,11 @@ export default function Export({ user, sb, controls, showToast }) {
       setStatus('Sending to export engine...')
       const res = await fetch('/api/export-rcm', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ entity:entityData, controls:fullControls, dossier:dossierData })
+        body: JSON.stringify({
+          entity:entityData, controls:fullControls, dossier:dossierData,
+          driftTriggers:driftTriggers, coverageMap:coverageMap,
+          incidents:incidentsData
+        })
       })
       if (!res.ok) { const e=await res.json(); throw new Error(e.error||'Export failed') }
       const blob = await res.blob()

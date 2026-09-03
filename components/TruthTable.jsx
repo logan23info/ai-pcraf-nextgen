@@ -23,6 +23,16 @@ function cellStyle(val) {
 }
 
 export default function TruthTable({ user, sb, currentEntityId, showToast, ciiPresumption, piiAlwaysInvolved }) {
+  const { setActiveIncident, lastFetchDates, controls } = useEngagement()
+
+  // F4: Dossier staleness check
+  const STALE_DAYS = 90
+  const now = new Date()
+  const staleFeeds = ['FETCH-01','FETCH-02'].filter(function(id) {
+    if (!lastFetchDates[id]) return true
+    const days = (now - new Date(lastFetchDates[id])) / (1000 * 60 * 60 * 24)
+    return days > STALE_DAYS
+  })
   const [incident, setIncident] = useState('')
   const [pii, setPii]           = useState(piiAlwaysInvolved ? 'yes' : 'no')
   const [cii, setCii]           = useState(ciiPresumption ? 'yes' : 'unknown')
@@ -93,10 +103,15 @@ CITATION RULES: DocumentName, Chapter/Section [VT]. CERT-In always "April 2022".
     try {
       const res = await callAPI(prompt, 1800)
       setOutput(formatAIOutput(res))
-      if (user) await sb.from('incidents').insert({
-        user_id:user.id, entity_id:currentEntityId||null,
-        description:incident, pii, cii, financial, ai_analysis:res
-      })
+      if (user) {
+        await sb.from('incidents').insert({
+          user_id:user.id, entity_id:currentEntityId||null,
+          description:incident, pii, cii, financial, ai_analysis:res
+        })
+        // F1: Share incident with DAKSH via context
+        setActiveIncident({ description:incident, pii, cii, financial, severity:'Sev-1', analysis:res })
+        showToast('Incident saved - switch to DAKSH tab to generate payload')
+      }
     } catch(e) { setError(e.message) } finally { setLoading(false) }
   }
 
@@ -108,6 +123,15 @@ CITATION RULES: DocumentName, Chapter/Section [VT]. CERT-In always "April 2022".
     <div>
       <SectionHeader title="Multi-agency incident truth table"
         subtitle="Evaluate any incident against all four reporting obligations. HCD rule — strictest SLA governs."/>
+      {/* F4: Dossier staleness warning */}
+      {staleFeeds.length > 0 && (
+        <div className="mb-3 p-3 rounded text-xs" style={{background:'#FEF3C7',color:'#92400E'}}>
+          <strong>Warning:</strong> Regulatory dossier for {staleFeeds.join(', ')} is stale or never fetched.
+          Citations in this analysis may be based on outdated regulatory data.
+          Go to Dossier tab and run fetches before relying on this analysis.
+        </div>
+      )}
+
       <Card title="Incident classifier">
         <FormGrid>
           <FormGroup label="Incident description" htmlFor="tt-inc">
@@ -160,6 +184,55 @@ CITATION RULES: DocumentName, Chapter/Section [VT]. CERT-In always "April 2022".
       )}
       {loading && <Spinner label="Generating incident analysis..."/>}
       {(output||error) && <AIOutput html={output} error={error}/>}
+
+      {/* F2: Relevant controls from Control Matrix */}
+      {result && controls.length > 0 && (function() {
+        const domainMap = {
+          'RBI DAKSH':'INC', 'CERT-In':'INC', financial:'CBS',
+        }
+        const incidentLower = incident.toLowerCase()
+        const relevant = controls.filter(function(c) {
+          const dom = (c.ctrl_domain || '').toLowerCase()
+          const ref = (c.codex_ref || '').toLowerCase()
+          return (
+            (incidentLower.includes('cbs') || incidentLower.includes('banking') || incidentLower.includes('transaction')) && dom === 'cbs' ||
+            (incidentLower.includes('access') || incidentLower.includes('credential') || incidentLower.includes('privileged')) && dom === 'iam' ||
+            (incidentLower.includes('incident') || incidentLower.includes('ransomware') || incidentLower.includes('breach')) && dom === 'inc' ||
+            (incidentLower.includes('data') || incidentLower.includes('pii') || incidentLower.includes('customer')) && dom === 'dlp' ||
+            (incidentLower.includes('api') || incidentLower.includes('lsp') || incidentLower.includes('integration')) && dom === 'api'
+          )
+        })
+        if (!relevant.length) return null
+        return (
+          <Card title={'Control linkage - ' + relevant.length + ' controls relevant to this incident'} className="mt-3">
+            <p className="text-xs text-gray-500 mb-2">
+              These controls from your Control Matrix are relevant to this incident.
+              Mark each as Operated / Failed to identify root cause.
+            </p>
+            <Table headers={['Control ID','Domain','Type','Codex ref','Status']}>
+              {relevant.map(function(c, i) {
+                return (
+                  <tr key={i} className="border-b border-gray-100 last:border-0">
+                    <td className="px-3 py-2 font-mono text-xs">{c.id}</td>
+                    <td className="px-3 py-2"><span className="tag tag-bs">{c.ctrl_domain}</span></td>
+                    <td className="px-3 py-2 text-xs">{c.ctrl_type || c.source_status}</td>
+                    <td className="px-3 py-2 text-xs max-w-xs" style={{maxWidth:200}}>{(c.codex_ref||'').substring(0,50)}</td>
+                    <td className="px-3 py-2">
+                      <select className="text-xs border border-gray-200 rounded px-1 py-0.5"
+                        onChange={function(e) { showToast(c.id + ' marked as ' + e.target.value) }}>
+                        <option value="">Assess</option>
+                        <option value="Operated">Operated</option>
+                        <option value="Failed">Failed - root cause</option>
+                        <option value="Not tested">Not tested</option>
+                      </select>
+                    </td>
+                  </tr>
+                )
+              })}
+            </Table>
+          </Card>
+        )
+      })()}
 
       <div className="mt-6">
         <div className="text-sm font-semibold mb-2">Mandatory truth table — all 8 incident classes</div>

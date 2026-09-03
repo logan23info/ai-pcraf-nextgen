@@ -46,6 +46,17 @@ export default function ControlMatrix({ user, sb, controls, loadControls, curren
 
   useEffect(() => { loadControls() }, [])
 
+  // F3: Pre-fill focus from Intelligence GAP item
+  useEffect(function() {
+    if (typeof window !== 'undefined' && window._gapObligation) {
+      const ob = window._gapObligation
+      setFocus((ob.obligation_text || '').substring(0, 200))
+      if (ob.domain) setCtrlDomain(ob.domain)
+      window._gapObligation = null
+      showToast('Focus pre-filled from GAP obligation - review and generate')
+    }
+  }, [])
+
   function domainSeq() {
     return controls.filter(c => c.ctrl_domain === ctrlDomain).length + 1
   }

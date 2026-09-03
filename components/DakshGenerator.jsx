@@ -1,5 +1,6 @@
 "use client"
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useEngagement } from '../lib/EngagementContext'
 import { Card, SectionHeader, FormGrid, FormGroup, Input, Select, Textarea, BtnRow, Btn, Spinner, Table } from './ui'
 
 function genRef() {
@@ -8,12 +9,25 @@ function genRef() {
 }
 
 export default function DakshGenerator({ user, sb, currentEntityId, showToast }) {
+  const { activeIncident } = useEngagement()
+
   const [incident, setIncident] = useState('')
   const [severity, setSeverity] = useState('Sev-1')
   const [detectedAt, setDetected] = useState('')
   const [pii, setPii]           = useState('yes')
   const [cii, setCii]           = useState('yes')
   const [financial, setFinancial] = useState('yes')
+
+  // F1: Pre-fill from Truth Table incident if available
+  useEffect(function() {
+    if (activeIncident && !incident) {
+      setIncident(activeIncident.description || '')
+      setPii(activeIncident.pii || 'yes')
+      setCii(activeIncident.cii || 'yes')
+      setFinancial(activeIncident.financial || 'yes')
+      setSeverity(activeIncident.severity || 'Sev-1')
+    }
+  }, [activeIncident])
   const [payload, setPayload]   = useState(null)
   const [loading, setLoading]   = useState(false)
   const [history, setHistory]   = useState([])
@@ -45,7 +59,7 @@ export default function DakshGenerator({ user, sb, currentEntityId, showToast })
         severity, incident_type:data.payload.incident_type||'',
         payload_json:data.payload
       })
-      showToast('Payload generated — ' + ref)
+      showToast('Payload generated - ' + ref)
     } catch(e) { showToast('Error: ' + e.message) }
     finally { setLoading(false) }
   }
@@ -84,6 +98,11 @@ export default function DakshGenerator({ user, sb, currentEntityId, showToast })
       <div className="p-3 rounded mb-3 text-xs" style={{background:'#FEF3C7',color:'#92400E'}}>
         ⚠ <strong>[BS-02] DRAFT ONLY:</strong> The DAKSH portal field schema has not been independently verified. Validate all field names against the live portal at daksh.rbi.org.in before submission.
       </div>
+      {activeIncident && (
+        <div className="mb-3 p-3 rounded text-xs" style={{background:'#D1FAE5',color:'#065F46'}}>
+          ✓ Incident pre-filled from Truth Table. Review and adjust before generating payload.
+        </div>
+      )}
       <Card title="Incident details">
         <FormGrid>
           <FormGroup label="Incident description" htmlFor="dk-inc" span2>
