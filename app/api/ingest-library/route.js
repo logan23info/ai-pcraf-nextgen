@@ -21,26 +21,77 @@ export async function POST(req) {
       const ws   = wb.Sheets[wb.SheetNames[0]]
       const rows = XLSX.utils.sheet_to_json(ws, { defval: '' })
 
-      // Try to detect columns — flexible mapping
-      controls = rows.map((row, i) => {
-        const keys = Object.keys(row).map(k => k.toLowerCase())
-        const get  = (...candidates) => {
-          for (const c of candidates) {
-            const k = keys.find(k => k.includes(c))
-            if (k) return String(row[Object.keys(row)[keys.indexOf(k)]] || '')
+      if (!rows.length) {
+        return NextResponse.json({ error: 'No data rows found in file', filename, controls: [], count: 0 })
+      }
+
+      // Get actual headers for debugging
+      const actualHeaders = Object.keys(rows[0])
+      console.log('Excel headers found:', actualHeaders)
+
+      // Clean a key for matching
+      function cleanKey(k) { return k.toLowerCase().replace(/[^a-z0-9]/g,'') }
+
+      // Find the best column for a field using ordered candidates
+      // Uses longest-description column when multiple match 'control'
+      function getBestCol(row, candidates) {
+        const rowKeys = Object.keys(row)
+        // First: exact prefix match (e.g. 'statement' matches 'Control Statement' but not 'Control ID')
+        for (const candidate of candidates) {
+          const c = candidate.toLowerCase().replace(/[^a-z0-9]/g,'')
+          const match = rowKeys.find(k => {
+            const ck = cleanKey(k)
+            // Prefer keys where candidate appears NOT at position 0 (avoids 'controlid' matching 'control')
+            return ck.includes(c) && ck.indexOf(c) > 0
+          })
+          if (match) {
+            const val = String(row[match] || '').trim()
+            if (val) return val
           }
-          return ''
         }
+        // Second: any match
+        for (const candidate of candidates) {
+          const c = candidate.toLowerCase().replace(/[^a-z0-9]/g,'')
+          const match = rowKeys.find(k => cleanKey(k).includes(c))
+          if (match) {
+            const val = String(row[match] || '').trim()
+            if (val) return val
+          }
+        }
+        return ''
+      }
+
+      // For control statement specifically — pick the longest text column
+      function getControlStatement(row) {
+        const rowKeys = Object.keys(row)
+        const candidates = rowKeys.filter(k => {
+          const ck = cleanKey(k)
+          return ck.includes('statement') || ck.includes('objective') ||
+                 ck.includes('description') || ck.includes('activity') ||
+                 ck.includes('requirement') || ck.includes('procedure')
+        })
+        // If no match, pick the longest value column
+        const pool = candidates.length ? candidates : rowKeys
+        let best = '', bestLen = 0
+        for (const k of pool) {
+          const v = String(row[k] || '').trim()
+          if (v.length > bestLen && v.length > 10) { best = v; bestLen = v.length }
+        }
+        return best
+      }
+
+      controls = rows.map(function(row, i) {
         return {
           row_index:         i + 2,
-          control_statement: get('control','description','objective','statement'),
-          domain:            get('domain','category','area'),
-          citation:          get('citation','reference','regulation','codex','ref'),
-          sla:               get('sla','timeline','frequency'),
-          evidence:          get('evidence','artifact','document'),
-          control_type:      get('type','preventive','detective','corrective'),
+          control_statement: getControlStatement(row),
+          domain:            getBestCol(row, ['domain','category','area']),
+          citation:          getBestCol(row, ['citation','reference','regulation','codex','rbi','cert','dpdp','standard']),
+          sla:               getBestCol(row, ['sla','timeline','frequency','period','schedule']),
+          evidence:          getBestCol(row, ['evidence','artifact','document','proof','record']),
+          control_type:      getBestCol(row, ['type','preventive','detective','corrective','nature']),
+          _headers:          actualHeaders.join(' | ')
         }
-      }).filter(c => c.control_statement.length > 10)
+      }).filter(function(c) { return c.control_statement && c.control_statement.length > 10 })
 
     } else if (fileType === 'json') {
       const data = JSON.parse(buffer.toString('utf-8'))
@@ -102,7 +153,9 @@ Text: ${lines.slice(0,100).join('\n')}`
       return NextResponse.json({ error: 'Unsupported format. Use Excel, CSV, JSON, Word, or PDF.' }, { status: 400 })
     }
 
-    return NextResponse.json({ filename, controls, count: controls.length })
+    const headers = controls.length > 0 ? controls[0]._headers : 'no headers detected'
+    controls = controls.map(function(c) { delete c._headers; return c })
+    return NextResponse.json({ filename, controls, count: controls.length, detected_headers: headers })
 
   } catch(e) {
     console.error('ingest-library error:', e)
