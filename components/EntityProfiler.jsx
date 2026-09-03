@@ -271,6 +271,11 @@ export default function EntityProfiler({ user, sb, showToast }) {
                 <>
                   <FormGroup label="SBR layer (auto-derived)">
                     <div className="px-2.5 py-1.5 text-sm rounded border border-gray-100 bg-gray-50 font-semibold" style={{color:'#5B21B6'}}>{sbrLayer}</div>
+                    {(sbrLayer === 'Middle Layer (ML)') && (
+                      <div className="text-xs mt-1" style={{color:'#92400E'}}>
+                        If RBI has specifically identified this entity as Upper Layer, select NBFC-UL manually below.
+                      </div>
+                    )}
                   </FormGroup>
                   <FormGroup label="Min NOF threshold (auto-derived)">
                     <div className="px-2.5 py-1.5 text-sm rounded border border-gray-100 bg-gray-50">{nofThreshold}</div>
