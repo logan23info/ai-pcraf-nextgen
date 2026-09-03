@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.tag { @apply inline-block px-1.5 py-0.5 rounded text-xs font-bold font-mono; }
+.tag-v  { background:#D1FAE5; color:#065F46; }
+.tag-vt { background:#DBEAFE; color:#1E40AF; }
+.tag-i  { background:#FEF3C7; color:#92400E; }
+.tag-u  { background:#F3F4F6; color:#374151; }
+.tag-fr { background:#FEE2E2; color:#991B1B; }
+.tag-bs { background:#EDE9FE; color:#5B21B6; }
+.risk-critical { color:#991B1B; font-weight:600; }
+.risk-high     { color:#C2410C; font-weight:600; }
+.risk-medium   { color:#B45309; font-weight:600; }
+.risk-low      { color:#065F46; font-weight:600; }
+.ai-output h3 { font-size:13px; font-weight:700; color:#0F1E3C; border-bottom:1px solid #E2E5EA; padding-bottom:4px; margin:14px 0 6px; }
+.ai-output h3:first-child { margin-top:0; }
+.ai-output .field-row { display:flex; gap:8px; font-size:12px; margin-bottom:5px; line-height:1.5; }
+.ai-output .field-label { color:#6B7280; font-weight:600; min-width:140px; flex-shrink:0; }
+.ai-output .field-value { color:#111827; flex:1; }
+.ai-output .step-block { border-left:3px solid #0F1E3C; padding:6px 0 6px 12px; margin:6px 0; font-size:12px; }
+.ai-output .step-title { font-weight:700; color:#0F1E3C; margin-bottom:2px; }
+.ai-output .step-body  { color:#1F2937; line-height:1.6; }
+.ai-output ol,.ai-output ul { margin:6px 0 6px 20px; font-size:12px; line-height:1.7; }
+.ai-output li { margin-bottom:3px; }
+.ai-output hr { border:none; border-top:1px solid #E2E5EA; margin:10px 0; }
+.ai-output p  { font-size:12px; line-height:1.7; margin-bottom:6px; color:#1F2937; }
+.ai-output .risk-badge { display:inline-block; padding:1px 8px; border-radius:3px; font-size:11px; font-weight:700; }
+.ai-output .risk-badge.critical { background:#FEE2E2; color:#991B1B; }
+.ai-output .risk-badge.high     { background:#FFEDD5; color:#C2410C; }
+.ai-output .risk-badge.medium   { background:#FEF3C7; color:#B45309; }
+.ai-output .risk-badge.low      { background:#D1FAE5; color:#065F46; }
+.ai-output .alert-badge { display:inline-block; padding:1px 8px; border-radius:3px; font-size:11px; font-weight:700; background:#FEF3C7; color:#92400E; }
+.ai-output .alert-badge.red { background:#FEE2E2; color:#991B1B; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.spinner { animation:spin .7s linear infinite; }

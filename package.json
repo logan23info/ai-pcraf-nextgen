@@ -1,0 +1,25 @@
+{
+  "name": "ai-pcraf-nextgen",
+  "version": "3.0.0",
+  "description": "AI-Powered Cyber Risk Assurance Framework — Indian BFSI IT Audit",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "14.2.5",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "@supabase/supabase-js": "2.44.4",
+    "@supabase/ssr": "0.3.0",
+    "xlsx": "0.18.5",
+    "pdfkit": "0.15.1"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.4",
+    "autoprefixer": "10.4.19",
+    "postcss": "8.4.39"
+  }
+}

@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --navy:#0F1E3C; --navy-mid:#1A2F55; --navy-light:#243D6E;
+  --accent:#2563EB; --text:#111827; --text-muted:#6B7280;
+  --border:#E2E5EA; --surface:#F7F8FA;
+  --risk-critical:#991B1B; --risk-high:#C2410C;
+  --risk-medium:#B45309; --risk-low:#065F46;
+}
+
+.tag { @apply inline-block px-1.5 py-0.5 rounded text-xs font-bold font-mono; }
+.tag-v  { background:#D1FAE5; color:#065F46; }
+.tag-vt { background:#DBEAFE; color:#1E40AF; }
+.tag-i  { background:#FEF3C7; color:#92400E; }
+.tag-u  { background:#F3F4F6; color:#374151; }
+.tag-fr { background:#FEE2E2; color:#991B1B; }
+.tag-bs { background:#EDE9FE; color:#5B21B6; }
+.risk-critical { color:#991B1B; font-weight:600; }
+.risk-high     { color:#C2410C; font-weight:600; }
+.risk-medium   { color:#B45309; font-weight:600; }
+.risk-low      { color:#065F46; font-weight:600; }
+
+.ai-output h3 { @apply text-sm font-bold border-b border-gray-200 pb-1 mt-3 mb-1.5; color:#0F1E3C; }
+.ai-output h3:first-child { @apply mt-0; }
+.ai-output .field-row { @apply flex gap-2 text-xs mb-1 leading-relaxed; }
+.ai-output .field-label { @apply text-gray-500 font-semibold shrink-0; min-width:140px; }
+.ai-output .field-value { @apply text-gray-900 flex-1; }
+.ai-output .step-block { border-left:3px solid #0F1E3C; @apply pl-3 my-1.5 text-xs; }
+.ai-output .step-title { @apply font-bold mb-0.5; color:#0F1E3C; }
+.ai-output .step-body  { @apply text-gray-800 leading-relaxed; }
+.ai-output ol,.ai-output ul { @apply text-xs ml-5 my-1.5 leading-relaxed; }
+.ai-output li { @apply mb-1; }
+.ai-output hr { @apply border-t border-gray-200 my-2; }
+.ai-output p  { @apply text-xs leading-relaxed mb-1.5 text-gray-800; }
+.ai-output .risk-badge { @apply inline-block px-2 py-0.5 rounded text-xs font-bold; }
+.ai-output .risk-badge.critical { background:#FEE2E2; color:#991B1B; }
+.ai-output .risk-badge.high     { background:#FFEDD5; color:#C2410C; }
+.ai-output .risk-badge.medium   { background:#FEF3C7; color:#B45309; }
+.ai-output .risk-badge.low      { background:#D1FAE5; color:#065F46; }
+.ai-output .alert-badge { @apply inline-block px-2 py-0.5 rounded text-xs font-bold; background:#FEF3C7; color:#92400E; }
+.ai-output .alert-badge.red { background:#FEE2E2; color:#991B1B; }
+
+@keyframes spin { to { transform:rotate(360deg); } }
+.spinner { animation:spin .7s linear infinite; }
