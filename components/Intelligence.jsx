@@ -20,7 +20,7 @@ const STATUS_STYLE = {
 }
 
 export default function Intelligence({ user, sb, controls, currentEntityId, showToast }) {
-  const { setActiveTab } = useEngagement ? useEngagement() : {}
+  const engagementCtx = useEngagement()
 
   // F3: Navigate to control matrix with pre-filled focus from GAP item
   function generateFromGap(obligation) {
