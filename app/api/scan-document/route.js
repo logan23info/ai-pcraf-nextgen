@@ -20,14 +20,31 @@ function chunkText(text, size) {
 }
 
 async function extractObligations(chunk, apiKey, fetchId) {
-  const prompt = 'You are a regulatory obligation extractor for Indian BFSI IT Audit under AI-PCRAF v3.0.\n\n' +
-    'Extract all control obligations from this regulatory text chunk.\n' +
-    'Regulatory source: ' + (fetchId || 'Indian regulatory document') + '\n\n' +
-    'Text chunk:\n' + chunk + '\n\n' +
-    'Return ONLY a JSON array. No markdown. No preamble. Start with [ end with ]\n' +
-    'Each item must have exactly these fields:\n' +
-    '{"section_ref":"Chapter X Section Y.Z","obligation_text":"precise obligation","domain":"CBS|CLD|API|IAM|AI|INC|TPR|DLP|AUD","tier":"ALL|SCB|SFB|NBFC-ML|NBFC-UL|NBFC-BL","sla":"time constraint or null"}\n' +
-    'If no obligations found return []'
+  const prompt = [
+    'You are a regulatory obligation extractor for Indian BFSI IT Audit under AI-PCRAF v3.0.',
+    'Extract ONLY actionable IT control obligations from this regulatory text chunk.',
+    'Regulatory source: ' + (fetchId || 'Indian regulatory document'),
+    '',
+    'Text chunk:',
+    chunk,
+    '',
+    'Return ONLY a JSON array. No markdown. Start with [ end with ]',
+    'Each item: {"section_ref":"Ch X Sec Y.Z","obligation_text":"precise obligation","domain":"CBS|CLD|API|IAM|AI|INC|TPR|DLP|AUD","tier":"ALL|SCB|NBFC-ML|NBFC-BL","sla":"time or null"}',
+    '',
+    'STRICT FILTER - DO NOT extract - return [] for these:',
+    '- Short title or naming of the document (administrative, commencement, applicability)',
+    '- Commencement date: come into effect immediately (administrative provision)',
+    '- Applicability: applicable to commercial banks',
+    '- Definitions: X means Y for the purpose of',
+    '- Penalty provisions or enforcement consequences',
+    '- Transitional or saving clauses',
+    '',
+    'ONLY extract obligations requiring IT control, process, governance, or security action.',
+    'Valid: board must approve IT policy annually, SOC must operate 24x7, report within 6 hours',
+    'Invalid: these directions shall be called, come into effect, applicable to, means',
+    '',
+    'If no valid control obligations found return []',
+  ].join('\\n')
 
   try {
     const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
