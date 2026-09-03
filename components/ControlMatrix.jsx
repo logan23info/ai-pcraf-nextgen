@@ -51,6 +51,7 @@ export default function ControlMatrix({ user, sb, controls, loadControls, curren
   }
 
   async function generate() {
+    if (!currentEntityId) { showToast('Save entity to DB first — Controls must be linked to an entity'); return }
     if (!focus) { showToast('Describe the control focus'); return }
     const seq = domainSeq()
     const controlId = 'CA-' + ctrlDomain + '-' + String(seq).padStart(2,'0')
