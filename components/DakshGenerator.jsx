@@ -18,7 +18,12 @@ export default function DakshGenerator({ user, sb, currentEntityId, showToast })
   const [cii, setCii]           = useState('yes')
   const [financial, setFinancial] = useState('yes')
 
-  // F1/P8: Pre-fill from Truth Table incident + failed controls
+  const [payload, setPayload]   = useState(null)
+  const [loading, setLoading]   = useState(false)
+  const [history, setHistory]   = useState([])
+  const [incRef, setIncRef]     = useState('')
+
+  // F1/P8: Pre-fill from Truth Table — useEffect after all useState
   useEffect(function() {
     if (activeIncident && !incident) {
       setIncident(activeIncident.description || '')
@@ -28,10 +33,6 @@ export default function DakshGenerator({ user, sb, currentEntityId, showToast })
       setSeverity(activeIncident.severity || 'Sev-1')
     }
   }, [activeIncident])
-  const [payload, setPayload]   = useState(null)
-  const [loading, setLoading]   = useState(false)
-  const [history, setHistory]   = useState([])
-  const [incRef, setIncRef]     = useState('')
 
   async function generate() {
     if (!incident||!detectedAt) { showToast('Enter incident description and detection time'); return }

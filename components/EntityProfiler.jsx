@@ -1,5 +1,5 @@
 "use client"
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { callAPI } from '../lib/api'
 import { formatAIOutput } from '../lib/formatter'
 import { useEngagement, deriveSBRLayer, deriveNOF } from '../lib/EngagementContext'
@@ -48,7 +48,22 @@ export default function EntityProfiler({ user, sb, showToast }) {
   const sbrLayer = form.functionalType ? deriveSBRLayer(form.functionalType, form.totalAssets) : ''
   const nofThreshold = form.functionalType ? deriveNOF(form.functionalType) : ''
 
-  // P1: Load regulatory references when functional type changes
+  // ALL useState hooks declared first — React Rules of Hooks
+  const [output, setOutput]           = useState('')
+  const [error, setError]             = useState('')
+  const [loading, setLoading]         = useState(false)
+  const [regRefs, setRegRefs]         = useState({ applicable:[], notApplicable:[] })
+  const [refsLoading, setRefsLoading] = useState(false)
+  const [verifying, setVerifying]     = useState(false)
+  const [verifyResult, setVerifyResult] = useState(null)
+  const [triggers, setTriggers]       = useState([])
+  const [triggerLoading, setTriggerLoading] = useState(false)
+  const [profile, setProfile]         = useState(null)
+  const [profileLoading, setProfileLoading] = useState(false)
+  const [profileLocked, setProfileLocked]   = useState(false)
+  const [activeSection, setActiveSection]   = useState('identity')
+
+  // useEffect after all useState — P1 regulatory refs load
   useEffect(function() {
     if (!form.functionalType) return
     setRefsLoading(true)
@@ -63,19 +78,6 @@ export default function EntityProfiler({ user, sb, showToast }) {
     .finally(function() { setRefsLoading(false) })
   }, [form.functionalType, sbrLayer])
 
-  const [output, setOutput]           = useState('')
-  const [error, setError]             = useState('')
-  const [loading, setLoading]         = useState(false)
-  const [regRefs, setRegRefs]         = useState({ applicable:[], notApplicable:[] })
-  const [refsLoading, setRefsLoading] = useState(false)
-  const [verifying, setVerifying]     = useState(false)
-  const [verifyResult, setVerifyResult] = useState(null)
-  const [triggers, setTriggers]       = useState([])
-  const [triggerLoading, setTriggerLoading] = useState(false)
-  const [profile, setProfile]         = useState(null)
-  const [profileLoading, setProfileLoading] = useState(false)
-  const [profileLocked, setProfileLocked]   = useState(false)
-  const [activeSection, setActiveSection]   = useState('identity')
 
   // Section A: Generate entity profile narrative
   async function generate() {
