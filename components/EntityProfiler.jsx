@@ -65,6 +65,33 @@ export default function EntityProfiler({ user, sb, showToast }) {
   const [profileLocked, setProfileLocked]   = useState(false)
   const [activeSection, setActiveSection]   = useState('identity')
 
+  // Pre-populate form from engagement context on mount
+  useEffect(function() {
+    if (entity && !form.name) {
+      setForm(function(f) {
+        return Object.assign({}, f, {
+          name:            entity.name                || '',
+          functionalType:  entity.functional_type     || entity.type || '',
+          totalAssets:     entity.total_assets        || '',
+          rbiRegNo:        entity.rbi_registration_no || '',
+          cbs:             entity.cbs                 || '',
+          cloud:           entity.cloud               || 'none',
+          assets:          entity.assets              || '',
+          period:          entity.period              || '',
+          recentChanges:   entity.recent_changes      || '',
+          knownWeaknesses: entity.known_weaknesses    || '',
+          externalSignals: entity.external_signals    || '',
+          sbrOverride:     entity.sbr_layer && entity.sbr_layer.includes('Upper') ? 'Upper Layer (UL)'
+                           : entity.sbr_layer && entity.sbr_layer.includes('Top') ? 'Top Layer (TL)' : '',
+        })
+      })
+      if (entity.mandate_profile) {
+        setProfile(entity.mandate_profile)
+        setProfileLocked(entity.profile_locked || false)
+      }
+    }
+  }, [entity])
+
   // useEffect after all useState — P1 regulatory refs load
   useEffect(function() {
     if (!form.functionalType) return
