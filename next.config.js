@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: ['pdfkit', 'pdf-parse', 'mammoth']
-  }
+  // Next.js 15: serverExternalPackages replaces experimental.serverComponentsExternalPackages
+  serverExternalPackages: ['pdfkit', 'pdf-parse', 'mammoth'],
 }
 module.exports = nextConfig
