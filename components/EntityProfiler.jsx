@@ -525,62 +525,142 @@ export default function EntityProfiler({ user, sb, showToast }) {
           {profileLoading && <Spinner label="Generating regulatory mandate profile..."/>}
           {profile && (
             <div className="space-y-3 mt-3">
-              <Card title="Mandatory IT mandates">
-                <ul className="text-xs space-y-1">
-                  {(profile.mandatory_it_mandates||[]).map((m,i)=><li key={i} className="flex gap-2"><span className="text-green-600">✓</span>{m}</li>)}
-                </ul>
-              </Card>
-              <Card title="Priority control domains">
-                <div className="flex flex-wrap gap-2">
-                  {(profile.priority_domains||[]).map((d,i)=>(
-                    <span key={i} className="tag tag-bs">{i+1}. {d}</span>
-                  ))}
-                </div>
-              </Card>
-              <Card title="Applicable regulations">
-                <ul className="text-xs space-y-1">
-                  {(profile.applicable_regulations||[]).map((r,i)=><li key={i}>{r}</li>)}
-                </ul>
-              </Card>
-              <Card title="Entity flags">
-                {profile.sbr_verified_facts && (
-                  <div className="mb-2 px-2 py-1 rounded text-xs" style={{background:'#D1FAE5',color:'#065F46'}}>
-                    ✓ Key compliance flags verified against RBI {profile.governing_framework} — not AI-inferred
-                  </div>
-                )}
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  {[
-                    ['CII presumption', profile.cii_presumption, profile.cii_reasoning, false],
-                    ['PII always involved', profile.pii_always_involved, profile.pii_reasoning, false],
-                    ['SOC mandatory', profile.soc_required, null, true],
-                    ['CISO mandatory', profile.ciso_required, null, true],
-                    ['IT Committee mandatory', profile.it_committee_required, null, true],
-                  ].map(function(item) {
+
+              {/* SECTION A: VERIFIED from matrix - source of truth */}
+              <div className="p-2 rounded text-xs font-bold" style={{background:'#0F1E3C',color:'white'}}>
+                SECTION A - VERIFIED FROM REGULATORY MATRIX (source of truth)
+              </div>
+
+              <Card title={'Applicable frameworks for ' + form.functionalType + ' (' + (form.sbrLayer || sbrLayer) + ')'}>
+                <div className="space-y-1">
+                  {(profile.applicable_refs||[]).map(function(r,i) {
                     return (
-                      <div key={item[0]} className="p-2 rounded border border-gray-100">
-                        <div className="flex items-center gap-1">
-                          <span className="font-semibold text-gray-600">{item[0]}</span>
-                          {item[3] && <span className="text-xs px-1 rounded" style={{background:'#DBEAFE',color:'#1E40AF',fontSize:9}}>VERIFIED</span>}
-                        </div>
-                        <div className="font-bold mt-0.5" style={{color:item[1]?'#065F46':'#374151'}}>{item[1]?'Yes':'No'}</div>
-                        {item[2] && <div className="text-gray-400 mt-0.5">{item[2]}</div>}
+                      <div key={i} className="flex items-center gap-2 text-xs py-1 border-b border-gray-100 last:border-0">
+                        <span className="tag tag-v">[V]</span>
+                        <span className="font-semibold">{r.ref_code}</span>
+                        <span className="text-gray-600">{r.title}</span>
+                        <span className="text-gray-400 ml-auto">eff. {r.effective_date}</span>
                       </div>
                     )
                   })}
                 </div>
               </Card>
-              <Card title="Audit focus areas">
-                <ul className="text-xs space-y-1">
-                  {(profile.audit_focus_areas||[]).map((a,i)=><li key={i} className="flex gap-2"><span className="text-blue-600">{i+1}.</span>{a}</li>)}
-                </ul>
+
+              <Card title={'Mandatory requirements (' + (profile.mandatory_requirements||[]).length + ') - verified from matrix'}>
+                {['Governance','Risk','Infrastructure','Incident','Data','ThirdParty','Prudential'].map(function(cat) {
+                  const items = (profile.mandatory_requirements||[]).filter(function(r){return r.category===cat})
+                  if (!items.length) return null
+                  return (
+                    <div key={cat} className="mb-3">
+                      <div className="text-xs font-bold text-gray-500 mb-1 uppercase">{cat}</div>
+                      {items.map(function(req) {
+                        return (
+                          <div key={req.code} className="mb-1 p-2 rounded bg-gray-50 border border-gray-100">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs text-gray-400">{req.code}</span>
+                              <span className="text-xs font-semibold">{req.name}</span>
+                              <span className="tag tag-v ml-auto">[V]</span>
+                            </div>
+                            <div className="text-xs text-gray-600 mt-0.5">{req.value}</div>
+                            <div className="text-xs text-gray-400">{req.source_ref}</div>
+                            <div className="text-xs text-blue-600 mt-0.5">Evidence: {req.evidence}</div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })}
               </Card>
-              {(profile.blind_spots_active||[]).length > 0 && (
-                <Card title="Active blind spots for this entity">
-                  <div className="flex flex-wrap gap-2">
-                    {profile.blind_spots_active.map((bs,i)=><span key={i} className="tag tag-bs">{bs}</span>)}
+
+              <Card title={'Not applicable to this entity (' + (profile.not_applicable||[]).length + ')'}>
+                <div className="flex flex-wrap gap-2">
+                  {(profile.not_applicable||[]).map(function(r,i) {
+                    return (
+                      <div key={i} className="text-xs px-2 py-1 rounded" style={{background:'#F3F4F6',color:'#6B7280'}}>
+                        <span className="font-mono">{r.code}</span> {r.name}
+                        <span className="ml-1 text-gray-400">— {r.reason}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </Card>
+
+              <Card title="Compliance flags (verified from matrix)">
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  {[
+                    ['CISO', profile.ciso_required],
+                    ['IT Committee', profile.it_committee_required],
+                    ['SOC 24x7', profile.soc_required],
+                    ['CRO', profile.cro_required],
+                    ['IS Audit', profile.is_audit_required],
+                    ['BCP/DR', profile.bcp_required],
+                    ['VA', profile.va_required],
+                    ['Pen Test', profile.pt_required],
+                    ['Data Localisation', profile.data_localisation],
+                  ].map(function(item) {
+                    return (
+                      <div key={item[0]} className="p-2 rounded border border-gray-100 text-center">
+                        <div className="text-gray-500 mb-0.5">{item[0]}</div>
+                        <div className="font-bold text-sm" style={{color:item[1]?'#065F46':'#DC2626'}}>
+                          {item[1] ? 'Required' : 'Not required'}
+                        </div>
+                        <div className="text-xs mt-0.5 px-1 rounded" style={{background:'#DBEAFE',color:'#1E40AF',fontSize:9}}>VERIFIED</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </Card>
+
+              {/* SECTION B: AI CONTEXT - narrative only */}
+              <div className="p-2 rounded text-xs font-bold mt-4" style={{background:'#1E40AF',color:'white'}}>
+                SECTION B - AI CONTEXT (narrative - not regulatory decisions)
+              </div>
+
+              <Card title="CII and PII assessment">
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="p-2 rounded border border-gray-100">
+                    <div className="font-semibold text-gray-600 mb-0.5">CII presumption</div>
+                    <div className="font-bold" style={{color:profile.cii_presumption?'#065F46':'#374151'}}>
+                      {profile.cii_presumption ? 'Yes' : 'No'}
+                    </div>
+                    <div className="text-gray-400 mt-0.5">{profile.cii_reasoning}</div>
                   </div>
+                  <div className="p-2 rounded border border-gray-100">
+                    <div className="font-semibold text-gray-600 mb-0.5">PII always involved</div>
+                    <div className="font-bold" style={{color:profile.pii_always_involved?'#065F46':'#374151'}}>
+                      {profile.pii_always_involved ? 'Yes' : 'No'}
+                    </div>
+                    <div className="text-gray-400 mt-0.5">{profile.pii_reasoning}</div>
+                  </div>
+                </div>
+              </Card>
+
+              {(profile.audit_focus_areas||[]).length > 0 && (
+                <Card title="Audit focus areas (AI generated)">
+                  <ul className="text-xs space-y-1">
+                    {profile.audit_focus_areas.map(function(a,i) {
+                      return <li key={i} className="flex gap-2"><span className="text-blue-600">{i+1}.</span>{a}</li>
+                    })}
+                  </ul>
                 </Card>
               )}
+
+              {(profile.sbr_specific_obligations||[]).length > 0 && (
+                <Card title={'SBR-specific obligations for ' + sbrLayer + ' (AI generated)'}>
+                  <ul className="text-xs space-y-1">
+                    {profile.sbr_specific_obligations.map(function(o,i) {
+                      return <li key={i} className="flex gap-2"><span className="text-purple-600">{i+1}.</span>{o}</li>
+                    })}
+                  </ul>
+                </Card>
+              )}
+
+              {profile.drift_risk_summary && (
+                <Card title="Drift risk summary (AI generated)">
+                  <p className="text-xs text-gray-600">{profile.drift_risk_summary}</p>
+                </Card>
+              )}
+
             </div>
           )}
         </div>
