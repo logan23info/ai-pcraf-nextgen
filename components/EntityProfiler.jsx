@@ -35,7 +35,7 @@ const SEV_COLOR = {
 }
 
 export default function EntityProfiler({ user, sb, showToast }) {
-  const { setEntity, setMandateProfile, setDriftTriggers, loadContext } = useEngagement()
+  const { entity, setEntity, setMandateProfile, setDriftTriggers, loadContext } = useEngagement()
 
   const [form, setForm] = useState({
     name:'', functionalType:'', totalAssets:'', rbiRegNo:'',
