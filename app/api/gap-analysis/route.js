@@ -5,13 +5,19 @@ export async function POST(req) {
   if (!apiKey) return NextResponse.json({ error: 'PCRAF_Key not set' }, { status: 500 })
 
   try {
-    const { obligations, entityControls, mandateProfile, driftTriggers } = await req.json()
+    const { obligations, entityControls, mandateProfile, driftTriggers, matrixRequirements } = await req.json()
     if (!obligations?.length) return NextResponse.json({ error: 'No obligations provided' }, { status: 400 })
 
     const entityType  = mandateProfile?.functional_type || ''
     const sbrLayer    = mandateProfile?.sbr_layer || ''
     const activeDT    = (driftTriggers || []).filter(function(t) { return t.cascade_status === 'ACTIVE' })
       .map(function(t) { return t.trigger_ref + ' ' + t.domain + ' [' + t.severity + ']' }).join(', ')
+
+    // Matrix requirements for this entity — verified facts
+    const matrixText = (matrixRequirements || []).slice(0, 20).map(function(r) {
+      return r.requirement_code + ': ' + r.requirement_name + ' - ' + (r.value || 'required') +
+        ' | Evidence: ' + (r.evidence_required || 'not specified')
+    }).join('\n')
 
     const controlsText = (entityControls || []).slice(0, 30).map(function(c, i) {
       return [
@@ -38,6 +44,9 @@ export async function POST(req) {
           'Domain: ' + (ob.domain || '?'),
           'SLA required: ' + (ob.sla || 'not specified'),
           '',
+          'RBI MATRIX REQUIREMENTS FOR ' + entityType + ' (' + (matrixRequirements||[]).length + ' verified):',
+          matrixText || 'No matrix loaded',
+          '',
           'ENTITY ACTUAL CONTROLS (' + (entityControls||[]).length + ' controls from uploaded library):',
           controlsText || 'No controls uploaded',
           '',
@@ -55,6 +64,7 @@ export async function POST(req) {
           '}',
           '',
           'Rules:',
+          'Cross-reference both the RBI obligation AND the matrix requirement for this entity type.',
           'COVERED_V: entity control fully addresses obligation, citation verifiable from uploaded document',
           'COVERED_VT: entity control addresses obligation, citation from training knowledge only',
           'WEAK: control exists but has specific deficiency — state exactly what is wrong',
