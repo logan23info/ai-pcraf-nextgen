@@ -12,6 +12,7 @@ import Dossier from '../components/Dossier'
 import Intelligence from '../components/Intelligence'
 import DakshGenerator from '../components/DakshGenerator'
 import Export from '../components/Export'
+import FirmSettings from '../components/FirmSettings'
 
 function AppShell({ user, sb }) {
   const [activeTab, setActiveTab] = useState('entity')
@@ -32,6 +33,7 @@ function AppShell({ user, sb }) {
     { id:'intelligence', icon:'⬡', label:'Intelligence' },
     { id:'daksh',        icon:'⚠', label:'DAKSH' },
     { id:'export',       icon:'↓', label:'Export' },
+    { id:'settings',     icon:'⚙', label:'Settings' },
   ]
 
   const tabProps = {
@@ -55,6 +57,7 @@ function AppShell({ user, sb }) {
         {activeTab === 'intelligence' && <Intelligence    {...tabProps}/>}
         {activeTab === 'daksh'        && <DakshGenerator  {...tabProps}/>}
         {activeTab === 'export'       && <Export          {...tabProps}/>}
+        {activeTab === 'settings'     && <FirmSettings     user={user} sb={sb} showToast={showToast}/>}
       </div>
     </Layout>
   )
