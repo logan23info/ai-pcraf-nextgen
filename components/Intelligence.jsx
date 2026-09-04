@@ -1,6 +1,7 @@
 "use client"
 import { useState } from 'react'
 import { useEngagement } from '../lib/EngagementContext'
+import { callAPI } from '../lib/api'
 import { Card, SectionHeader, BtnRow, Btn, Spinner, Table, Tag } from './ui'
 
 const FETCH_LABELS = {
@@ -21,6 +22,9 @@ const STATUS_STYLE = {
 
 export default function Intelligence({ user, sb, controls, currentEntityId, showToast }) {
   const engagementCtx = useEngagement()
+  const [fixModal, setFixModal]   = useState(null)
+  const [fixLoading, setFixLoading] = useState(false)
+  const [fixText, setFixText]     = useState('')
 
   // F3: Navigate to control matrix with pre-filled focus from GAP item
   function generateFromGap(obligation) {
@@ -28,6 +32,64 @@ export default function Intelligence({ user, sb, controls, currentEntityId, show
       window._gapObligation = obligation
     }
     showToast('Go to Control Matrix tab - focus pre-filled from GAP obligation')
+  }
+
+  // P3: IMPROVE -> Fix control
+  async function openFixModal(result) {
+    const matched = controls.find(function(c) {
+      return c.id === result.matched_ai_control
+    })
+    if (!matched) {
+      showToast('Could not find matching control - check Control Matrix')
+      return
+    }
+    setFixModal({ control: matched, note: result.improvement_note || '', obligation: result.obligation })
+    setFixText(result.improvement_note || '')
+  }
+
+  async function applyFix() {
+    if (!fixModal) return
+    setFixLoading(true)
+    try {
+      const prompt = [
+        'You are an IT Audit consultant under AI-PCRAF v3.0.',
+        'Fix this control based on the improvement note.',
+        '',
+        'CONTROL: ' + fixModal.control.id,
+        'Current citation: ' + (fixModal.control.codex_ref || 'Not specified'),
+        'Current SLA: ' + (fixModal.control.sla || 'Not specified'),
+        'Current evidence: ' + (fixModal.control.evidence || 'Not specified'),
+        '',
+        'IMPROVEMENT REQUIRED: ' + fixText,
+        '',
+        'Return ONLY a JSON object with these corrected fields:',
+        'primary_codex_ref: corrected citation with Chapter/Section [VT]',
+        'reporting_sla: corrected SLA (always 6 hours for cyber incidents)',
+        'evidence_artifacts: corrected evidence list',
+        'ai_testing_procedure: improved testing procedure',
+        'improvement_summary: one sentence describing what was fixed',
+      ].join('\n')
+
+      const res = await callAPI(prompt, 1000)
+      const fb = res.indexOf('{'), lb = res.lastIndexOf('}')
+      const fix = JSON.parse(fb !== -1 && lb > fb ? res.substring(fb, lb+1) : res)
+
+      // Update control in Supabase
+      await sb.from('controls').update({
+        primary_codex_ref: fix.primary_codex_ref || fixModal.control.codex_ref,
+        reporting_sla:     fix.reporting_sla     || fixModal.control.sla,
+        evidence_artifacts:fix.evidence_artifacts|| fixModal.control.evidence,
+        ai_testing_procedure: fix.ai_testing_procedure || '',
+        source_truth_status: 'VERIFIED-TRAINING',
+      }).eq('control_id', fixModal.control.id).eq('user_id', user.id)
+
+      showToast(fixModal.control.id + ' fixed - ' + (fix.improvement_summary || 'control updated'))
+      setFixModal(null)
+    } catch(e) {
+      showToast('Fix error: ' + e.message)
+    } finally {
+      setFixLoading(false)
+    }
   }
 
   // Panel 1 — PDF Scanner
@@ -348,10 +410,10 @@ export default function Intelligence({ user, sb, controls, currentEntityId, show
                           </button>
                         )}
                         {r.status === 'WEAK' && (
-                          <button onClick={function(){showToast('Fix: ' + (r.improvement_note||'Review control'))}}
+                          <button onClick={function(){openFixModal(r)}}
                             className="text-xs px-2 py-0.5 rounded"
                             style={{background:'#FEF3C7',color:'#92400E'}}>
-                            Fix
+                            Fix control
                           </button>
                         )}
                       </td>
@@ -364,5 +426,44 @@ export default function Intelligence({ user, sb, controls, currentEntityId, show
         </div>
       )}
     </div>
+
+    {/* P3: Fix control modal */}
+    {fixModal && (
+      <div className="fixed inset-0 flex items-center justify-center z-50"
+        style={{background:'rgba(0,0,0,.45)'}}>
+        <div className="bg-white rounded-xl p-6" style={{width:520,maxHeight:'80vh',overflowY:'auto'}}>
+          <div className="text-base font-semibold mb-1">Fix control — {fixModal.control.id}</div>
+          <div className="text-xs text-gray-500 mb-3">
+            Obligation: {fixModal.obligation?.obligation_text?.substring(0,100)}
+          </div>
+          <div className="mb-3 p-3 rounded text-xs" style={{background:'#FEF3C7',color:'#92400E'}}>
+            <strong>Improvement required:</strong> {fixModal.note}
+          </div>
+          <div className="mb-3">
+            <div className="text-xs font-medium text-gray-500 mb-1">Edit improvement instruction:</div>
+            <textarea
+              value={fixText}
+              onChange={function(e){setFixText(e.target.value)}}
+              rows={3}
+              className="w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:border-blue-500"/>
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-xs mb-3">
+            <div><span className="text-gray-500">Current citation:</span><br/>{fixModal.control.codex_ref||'Not specified'}</div>
+            <div><span className="text-gray-500">Current SLA:</span><br/>{fixModal.control.sla||'Not specified'}</div>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={applyFix} disabled={fixLoading}
+              className="px-4 py-2 rounded text-sm font-medium text-white"
+              style={{background:'#2563EB'}}>
+              {fixLoading ? 'Fixing...' : 'Apply AI fix'}
+            </button>
+            <button onClick={function(){setFixModal(null)}}
+              className="px-4 py-2 rounded text-sm border border-gray-200">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
   )
 }
