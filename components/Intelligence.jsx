@@ -195,9 +195,10 @@ export default function Intelligence({ user, sb, controls, currentEntityId, show
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           obligations,
-          entityControls: libControls,
-          mandateProfile: engCtx.mandateProfile || null,
-          driftTriggers:  engCtx.driftTriggers  || [],
+          entityControls:     libControls,
+          mandateProfile:     engCtx.mandateProfile     || null,
+          driftTriggers:      engCtx.driftTriggers      || [],
+          matrixRequirements: engCtx.matrixRequirements || [],
         })
       })
       const data = await res.json()
