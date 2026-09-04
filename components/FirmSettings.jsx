@@ -13,8 +13,57 @@ export default function FirmSettings({ user, sb, showToast }) {
   const [engName, setEngName]     = useState('')
   const [engClient, setEngClient] = useState('')
   const [activeTab, setActiveTab] = useState('firm')
+  const [matrix, setMatrix]       = useState([])
+  const [matrixLoading, setMatrixLoading] = useState(false)
+  const [newReq, setNewReq]       = useState({
+    requirement_code:'', requirement_name:'', category:'Governance',
+    source_ref:'', applies_bl:false, applies_ml:true, applies_ul:true,
+    applies_tl:true, applies_scb:true, value_bl:'', value_ml:'', value_ul:'', value_scb:'',
+    evidence_required:'', testing_procedure:'', audit_frequency:'Annual'
+  })
+  const [addingReq, setAddingReq] = useState(false)
+  const [showAddForm, setShowAddForm] = useState(false)
 
-  useEffect(function() { loadFirm() }, [])
+  useEffect(function() { loadFirm(); loadMatrix() }, [])
+
+  async function loadMatrix() {
+    setMatrixLoading(true)
+    try {
+      const { data } = await sb.from('regulatory_compliance_matrix')
+        .select('*').eq('active', true).order('category').order('requirement_code')
+      setMatrix(data || [])
+    } catch(e) { showToast('Matrix load error: ' + e.message) }
+    finally { setMatrixLoading(false) }
+  }
+
+  async function addRequirement() {
+    if (!newReq.requirement_code || !newReq.requirement_name || !newReq.source_ref) {
+      showToast('Code, name and source ref are required'); return
+    }
+    setAddingReq(true)
+    try {
+      const { error } = await sb.from('regulatory_compliance_matrix').insert({
+        ...newReq, active: true
+      })
+      if (error) { showToast('Error: ' + error.message); return }
+      await loadMatrix()
+      setShowAddForm(false)
+      setNewReq({
+        requirement_code:'', requirement_name:'', category:'Governance',
+        source_ref:'', applies_bl:false, applies_ml:true, applies_ul:true,
+        applies_tl:true, applies_scb:true, value_bl:'', value_ml:'', value_ul:'', value_scb:'',
+        evidence_required:'', testing_procedure:'', audit_frequency:'Annual'
+      })
+      showToast('Requirement added - all future mandate profiles will include it')
+    } catch(e) { showToast('Error: ' + e.message) }
+    finally { setAddingReq(false) }
+  }
+
+  async function deactivateRequirement(id, code) {
+    await sb.from('regulatory_compliance_matrix').update({ active: false }).eq('id', id)
+    await loadMatrix()
+    showToast(code + ' deactivated - will not appear in future profiles')
+  }
 
   async function loadFirm() {
     setLoading(true)
@@ -89,6 +138,7 @@ export default function FirmSettings({ user, sb, showToast }) {
   const tabs = [
     { id:'firm', label:'Firm & Members' },
     { id:'engagements', label:'Engagements' },
+    { id:'matrix', label:'Regulatory Matrix' },
   ]
 
   return (
@@ -225,6 +275,128 @@ export default function FirmSettings({ user, sb, showToast }) {
               </Table>
             </Card>
           )}
+        </div>
+      )}
+
+      {/* REGULATORY MATRIX */}
+      {activeTab === 'matrix' && (
+        <div>
+          <Card title="Regulatory compliance matrix">
+            <p className="text-xs text-gray-500 mb-3">
+              This is the source of truth for all mandate profiles and gap analysis.
+              Add new requirements when RBI releases a new direction.
+              Deactivate superseded requirements.
+            </p>
+            <BtnRow>
+              <Btn onClick={function(){setShowAddForm(!showAddForm)}}>
+                {showAddForm ? 'Cancel' : '+ Add new requirement'}
+              </Btn>
+            </BtnRow>
+          </Card>
+
+          {showAddForm && (
+            <Card title="Add new regulatory requirement">
+              <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                {[
+                  ['Requirement code','requirement_code','text','e.g. GOV-006'],
+                  ['Requirement name','requirement_name','text','e.g. CISO reporting line'],
+                  ['Source reference','source_ref','text','e.g. RBI CB Cyber Dir 2026 Para 28(6) [V]'],
+                  ['Audit frequency','audit_frequency','text','e.g. Annual'],
+                ].map(function(field) {
+                  return (
+                    <div key={field[1]}>
+                      <label className="block text-gray-500 mb-0.5">{field[0]}</label>
+                      <input value={newReq[field[1]]} onChange={function(e){setNewReq(function(p){return Object.assign({},p,{[field[1]]:e.target.value})})}}
+                        placeholder={field[3]}
+                        className="w-full border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-500"/>
+                    </div>
+                  )
+                })}
+                <div>
+                  <label className="block text-gray-500 mb-0.5">Category</label>
+                  <select value={newReq.category} onChange={function(e){setNewReq(function(p){return Object.assign({},p,{category:e.target.value})})}}
+                    className="w-full border border-gray-200 rounded px-2 py-1 text-xs">
+                    {['Governance','Risk','Infrastructure','Incident','Data','ThirdParty','Prudential'].map(function(c) {
+                      return <option key={c} value={c}>{c}</option>
+                    })}
+                  </select>
+                </div>
+              </div>
+              <div className="mb-3">
+                <div className="text-xs font-medium text-gray-500 mb-1">Applies to:</div>
+                <div className="flex gap-3 flex-wrap">
+                  {[['applies_bl','BL'],['applies_ml','ML'],['applies_ul','UL'],['applies_tl','TL'],['applies_scb','SCB']].map(function(item) {
+                    return (
+                      <label key={item[0]} className="flex items-center gap-1 text-xs cursor-pointer">
+                        <input type="checkbox" checked={newReq[item[0]]}
+                          onChange={function(e){setNewReq(function(p){return Object.assign({},p,{[item[0]]:e.target.checked})})}}/>
+                        {item[1]}
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                {[['value_bl','BL value'],['value_ml','ML value'],['value_ul','UL value'],['value_scb','SCB value']].map(function(field) {
+                  return (
+                    <div key={field[0]}>
+                      <label className="block text-xs text-gray-500 mb-0.5">{field[1]}</label>
+                      <input value={newReq[field[0]]} onChange={function(e){setNewReq(function(p){return Object.assign({},p,{[field[0]]:e.target.value})})}}
+                        placeholder="e.g. Mandatory — reports to Board"
+                        className="w-full border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none"/>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="mb-3">
+                <label className="block text-xs text-gray-500 mb-0.5">Evidence required</label>
+                <input value={newReq.evidence_required} onChange={function(e){setNewReq(function(p){return Object.assign({},p,{evidence_required:e.target.value})})}}
+                  placeholder="e.g. Appointment letter, Board resolution"
+                  className="w-full border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none"/>
+              </div>
+              <Btn onClick={addRequirement} disabled={addingReq}>
+                {addingReq ? 'Adding...' : 'Add requirement'}
+              </Btn>
+            </Card>
+          )}
+
+          {matrixLoading && <div className="text-xs text-gray-400 mt-3">Loading matrix...</div>}
+
+          {['Governance','Risk','Infrastructure','Incident','Data','ThirdParty','Prudential'].map(function(cat) {
+            const items = matrix.filter(function(r){return r.category===cat})
+            if (!items.length) return null
+            return (
+              <Card key={cat} title={cat + ' (' + items.length + ')'}>
+                {items.map(function(req) {
+                  return (
+                    <div key={req.id} className="flex items-start gap-2 py-2 border-b border-gray-100 last:border-0">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs text-gray-400">{req.requirement_code}</span>
+                          <span className="text-xs font-semibold">{req.requirement_name}</span>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-0.5">{req.source_ref}</div>
+                        <div className="flex gap-1 mt-1 flex-wrap">
+                          {[['BL',req.applies_bl],['ML',req.applies_ml],['UL',req.applies_ul],['TL',req.applies_tl],['SCB',req.applies_scb]].map(function(item) {
+                            return (
+                              <span key={item[0]} className="text-xs px-1.5 py-0.5 rounded"
+                                style={{background:item[1]?'#D1FAE5':'#F3F4F6',color:item[1]?'#065F46':'#9CA3AF'}}>
+                                {item[0]}
+                              </span>
+                            )
+                          })}
+                        </div>
+                      </div>
+                      <button onClick={function(){deactivateRequirement(req.id, req.requirement_code)}}
+                        className="text-xs px-2 py-0.5 rounded border border-gray-200 text-gray-400 hover:text-red-600 shrink-0">
+                        Deactivate
+                      </button>
+                    </div>
+                  )
+                })}
+              </Card>
+            )
+          })}
         </div>
       )}
     </div>
