@@ -228,7 +228,7 @@ export default function Intelligence({ user, sb, controls, currentEntityId, show
   ]
 
   return (
-    <div>
+    <>
       <SectionHeader title="Document intelligence & gap analysis"
         subtitle="Upload regulatory PDFs when fetch fails. Import your control library. Generate a delta report showing coverage gaps."/>
 
@@ -425,7 +425,6 @@ export default function Intelligence({ user, sb, controls, currentEntityId, show
           )}
         </div>
       )}
-    </div>
 
     {/* P3: Fix control modal */}
     {fixModal && (
@@ -465,5 +464,6 @@ export default function Intelligence({ user, sb, controls, currentEntityId, show
         </div>
       </div>
     )}
+    </>
   )
 }
