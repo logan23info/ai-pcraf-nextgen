@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getEntityRegulatoryContext } from '../../lib/regulatoryContext'
+import { getEntityRegulatoryContext } from '../../../lib/regulatoryContext'
 
 export async function POST(req) {
   const apiKey = process.env.PCRAF_Key
