@@ -189,10 +189,16 @@ export default function Intelligence({ user, sb, controls, currentEntityId, show
     if (!obligations.length) { showToast('Scan a regulatory document first'); return }
     setAnalyzing(true); setGapResults([]); setGapSummary(null)
     try {
+      const engCtx = engagementCtx || {}
       const res  = await fetch('/api/gap-analysis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ obligations, aiControls: controls, libraryControls: libControls })
+        body: JSON.stringify({
+          obligations,
+          entityControls: libControls,
+          mandateProfile: engCtx.mandateProfile || null,
+          driftTriggers:  engCtx.driftTriggers  || [],
+        })
       })
       const data = await res.json()
       if (!res.ok || data.error) throw new Error(data.error || 'Analysis failed')
@@ -223,7 +229,7 @@ export default function Intelligence({ user, sb, controls, currentEntityId, show
 
   const panels = [
     { id:'scan',    label:'1. PDF Scanner' },
-    { id:'library', label:'2. Library Import' },
+    { id:'library', label:'2. Entity Control Library' },
     { id:'delta',   label:'3. Delta Report' },
   ]
 
@@ -297,10 +303,10 @@ export default function Intelligence({ user, sb, controls, currentEntityId, show
       {/* PANEL 2 — LIBRARY IMPORT */}
       {activePanel === 'library' && (
         <div>
-          <Card title="Import existing control library">
+          <Card title="Upload entity own control library — their RCM, IS audit report, or policy document">
             <p className="text-xs text-gray-500 mb-3">
-              Upload your organisation&apos;s existing RCM or control library.
-              Supports: Excel (.xlsx), CSV, JSON (AI-PCRAF export), Word (.docx), PDF.
+              Upload the entity's OWN control library — their existing RCM, IS audit report, or policy document.
+              This is compared against RBI obligations to find gaps. Supports: Excel, CSV, JSON, Word, PDF.
             </p>
             <div className="mb-3">
               <label className="block text-xs font-medium text-gray-500 mb-1">Control library file</label>
@@ -400,7 +406,10 @@ export default function Intelligence({ user, sb, controls, currentEntityId, show
                           style={{background:s.bg,color:s.color}}>{s.label}</span>
                       </td>
                       <td className="px-3 py-2 text-xs">{r.delta_action||'—'}</td>
-                      <td className="px-3 py-2 text-xs max-w-xs text-gray-600">{r.improvement_note||r.gap_reason||'—'}</td>
+                      <td className="px-3 py-2 text-xs max-w-xs text-gray-600">
+                        {r.deficiency || r.recommendation || r.improvement_note || '—'}
+                        {r.audit_note && <div className="text-gray-400 mt-0.5 italic">{r.audit_note}</div>}
+                      </td>
                       <td className="px-3 py-2">
                         {r.status === 'GAP' && (
                           <button onClick={function(){generateFromGap(r.obligation)}}
