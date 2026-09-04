@@ -54,6 +54,8 @@ export default function EntityProfiler({ user, sb, showToast }) {
   const [loading, setLoading]         = useState(false)
   const [regRefs, setRegRefs]         = useState({ applicable:[], notApplicable:[] })
   const [refsLoading, setRefsLoading] = useState(false)
+  const [matrix, setMatrix]           = useState({ applicable:[], summary:{} })
+  const [matrixLoading, setMatrixLoading] = useState(false)
   const [verifying, setVerifying]     = useState(false)
   const [verifyResult, setVerifyResult] = useState(null)
   const [triggers, setTriggers]       = useState([])
@@ -76,6 +78,17 @@ export default function EntityProfiler({ user, sb, showToast }) {
     .then(function(data) { setRegRefs(data) })
     .catch(function() {})
     .finally(function() { setRefsLoading(false) })
+
+    setMatrixLoading(true)
+    fetch('/api/compliance-matrix', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ functionalType: form.functionalType, sbrLayer })
+    })
+    .then(function(r) { return r.json() })
+    .then(function(data) { setMatrix(data) })
+    .catch(function() {})
+    .finally(function() { setMatrixLoading(false) })
   }, [form.functionalType, sbrLayer])
 
 
@@ -367,6 +380,52 @@ export default function EntityProfiler({ user, sb, showToast }) {
                 </div>
               </div>
             )}
+
+            {/* Compliance Matrix Panel */}
+            {matrixLoading && (
+              <div className="mt-3 col-span-2 text-xs text-gray-400">Loading compliance matrix...</div>
+            )}
+            {matrix.applicable && matrix.applicable.length > 0 && (
+              <div className="mt-3 col-span-2">
+                <div className="text-xs font-semibold text-gray-500 mb-2">
+                  Compliance matrix — {matrix.applicable.length} requirements applicable to {form.functionalType} ({sbrLayer}):
+                  <span className="ml-2 text-xs px-1.5 py-0.5 rounded" style={{background:'#D1FAE5',color:'#065F46'}}>VERIFIED</span>
+                </div>
+                {['Governance','Risk','Infrastructure','Incident','Data','ThirdParty','Prudential'].map(function(cat) {
+                  const items = matrix.applicable.filter(function(r){return r.category===cat})
+                  if (!items.length) return null
+                  return (
+                    <div key={cat} className="mb-3">
+                      <div className="text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide">{cat}</div>
+                      {items.map(function(req) {
+                        return (
+                          <div key={req.requirement_code} className="mb-1 p-2 rounded border border-gray-100 bg-gray-50">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1">
+                                <span className="font-mono text-xs text-gray-400 mr-1">{req.requirement_code}</span>
+                                <span className="text-xs font-semibold">{req.requirement_name}</span>
+                              </div>
+                              <span className="text-xs px-1.5 py-0.5 rounded shrink-0"
+                                style={{background:'#D1FAE5',color:'#065F46'}}>Required</span>
+                            </div>
+                            <div className="text-xs text-gray-600 mt-0.5">{req.value}</div>
+                            <div className="text-xs text-gray-400 mt-0.5">{req.source_ref}</div>
+                            {req.exception_note && (
+                              <div className="text-xs mt-0.5" style={{color:'#92400E'}}>{req.exception_note}</div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })}
+                {matrix.not_applicable && matrix.not_applicable.length > 0 && (
+                  <div className="text-xs text-gray-400">
+                    Not applicable ({matrix.not_applicable.length}): {matrix.not_applicable.map(function(r){return r.requirement_code}).join(', ')}
+                  </div>
+                )}
+              </div>
+            )}
             <BtnRow>
               <Btn onClick={generate} disabled={loading}>Generate profile</Btn>
               <Btn onClick={saveToDB} variant="secondary">Save to DB</Btn>
@@ -484,20 +543,30 @@ export default function EntityProfiler({ user, sb, showToast }) {
                 </ul>
               </Card>
               <Card title="Entity flags">
+                {profile.sbr_verified_facts && (
+                  <div className="mb-2 px-2 py-1 rounded text-xs" style={{background:'#D1FAE5',color:'#065F46'}}>
+                    ✓ Key compliance flags verified against RBI {profile.governing_framework} — not AI-inferred
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   {[
-                    ['CII presumption', profile.cii_presumption, profile.cii_reasoning],
-                    ['PII always involved', profile.pii_always_involved, profile.pii_reasoning],
-                    ['SOC required', profile.soc_required, null],
-                    ['CISO required', profile.ciso_required, null],
-                    ['IT Committee required', profile.it_committee_required, null],
-                  ].map(([label,val,reason])=>(
-                    <div key={label} className="p-2 rounded border border-gray-100">
-                      <div className="font-semibold text-gray-600">{label}</div>
-                      <div className="font-bold mt-0.5" style={{color:val?'#065F46':'#374151'}}>{val?'Yes':'No'}</div>
-                      {reason && <div className="text-gray-400 mt-0.5">{reason}</div>}
-                    </div>
-                  ))}
+                    ['CII presumption', profile.cii_presumption, profile.cii_reasoning, false],
+                    ['PII always involved', profile.pii_always_involved, profile.pii_reasoning, false],
+                    ['SOC mandatory', profile.soc_required, null, true],
+                    ['CISO mandatory', profile.ciso_required, null, true],
+                    ['IT Committee mandatory', profile.it_committee_required, null, true],
+                  ].map(function(item) {
+                    return (
+                      <div key={item[0]} className="p-2 rounded border border-gray-100">
+                        <div className="flex items-center gap-1">
+                          <span className="font-semibold text-gray-600">{item[0]}</span>
+                          {item[3] && <span className="text-xs px-1 rounded" style={{background:'#DBEAFE',color:'#1E40AF',fontSize:9}}>VERIFIED</span>}
+                        </div>
+                        <div className="font-bold mt-0.5" style={{color:item[1]?'#065F46':'#374151'}}>{item[1]?'Yes':'No'}</div>
+                        {item[2] && <div className="text-gray-400 mt-0.5">{item[2]}</div>}
+                      </div>
+                    )
+                  })}
                 </div>
               </Card>
               <Card title="Audit focus areas">
